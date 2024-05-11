@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monopoly Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        #board {
+            width: 600px;
+            height: 350px;
+            border: 2px solid black;
+            display: flex;
+            flex-wrap: wrap;
+            position: relative;
+            background-color: pink;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .square {
+            width: 100px;
+            height: 100px;
+            border: 1px solid black;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            position: relative;
+        }
+
+        #playerInfoContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            font-size: 20px;
+        }
+
+        #playerInfo {
+            background-color: brown;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
+        }
+
+        #player2Info {
+            display: none; 
+            background-color: darkblue;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
+        }
+
+        #rollDice {
+            margin-bottom: 20px; 
+            padding: 10px 20px;
+            font-size: 20px;
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #rollDice:hover {
+            background-color: #0056b3;
+        }
+
+        .token {
+            width: 20px;
+            height: 20px;
+            background-color: purple;
+            border-radius: 50%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: top 0.5s, left 0.5s;
+        }
+
+        p {
+            margin: 5px 0;
+        }
+
+       
+        label {
+            margin-bottom: 10px;
+        }
+
+        select {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .price {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="board"></div>
+    
+    <div id="playerInfoContainer">
+        <div id="playerInfo">
+            <p><span id="playerIcon">👑</span> <span id="playerName">Player 1</span></p>
+            <p id="playerMoney">Money: $1500</p>
+            <p id="playerProperties">Properties: None</p>
+        </div>
+        <div id="player2Info">
+            <div id="playerInfo2">
+                <p><span id="playerIcon2">🗿</span> <span id="playerName2">Player 2</span></p>
+                <p id="playerMoney2">Money: $1500</p>
+                <p id="playerProperties2">Properties: None</p>
+            </div>
+        </div>
+        <label for="playerCount">Select Players:</label>
+        <select id="playerCount" onchange="changePlayerCount()">
+            <option value="1">1 Player</option>
+            <option value="2">2 Players</option>
+        </select>
+        <button id="rollDice" onclick="rollDice()">Roll Dice</button>
+    </div>
+
+    <script>
+        // Each boxes and the name of the places and their respective prices(modify if necessary)
+        const squares = [
+            { name: "Lionsheart Empire", cost: 100, owner: null },
+            { name: "Mediterranean Avenue", cost: 110, owner: null },
+            { name: "Moonsvale", cost: 150, owner: null },
+            { name: "Railroad Pass North", cost: 500, owner: null },
+            { name: "Emperium", cost: 180, owner: null },
+            { name: "Reading Town", cost: 220, owner: null },
+            { name: "Oriental Avenue", cost: 220, owner: null },
+            { name: "Barrela Empire", cost: 275, owner: null },
+            { name: "Vasar Palca", cost: 350, owner: null },
+            { name: "Railroad Pass South", cost: 500, owner: null },
+            { name: "Garrison", cost: 390, owner: null },
+            { name: "Ragnaros", cost: 499, owner: null },
+        ];
+
+        let playerPosition = 0;
+        let playerMoney = 2500; //Player1 cash (modify if necessary)
+        let playerProperties = [];
+        let playerMoney2 = 2500; //Player2 cash (modify if necessary)
+        let playerProperties2 = []; 
+        let currentPlayer = 1; 
+        let playerCount = 1; 
+
+        const playerNameElement = document.getElementById("playerName");
+        const playerMoneyElement = document.getElementById("playerMoney");
+        const playerPropertiesElement = document.getElementById("playerProperties");
+        const player2NameElement = document.getElementById("playerName2");
+        const player2MoneyElement = document.getElementById("playerMoney2");
+        const player2PropertiesElement = document.getElementById("playerProperties2");
+        const board = document.getElementById("board");
+        const playerToken = createPlayerToken();
+
+        // Function to create the player token
+        function createPlayerToken() {
+            const token = document.createElement("div");
+            token.className = "token";
+            board.appendChild(token);
+            return token;
+        }
+
+        // Function to roll the dice
+        function rollDice() {
+            const diceRoll = Math.floor(Math.random() * 6) + 1;
+            movePlayer(diceRoll);
+        }
+
+        // Function to move the player token
+        function movePlayer(steps) {
+            playerPosition = (playerPosition + steps) % squares.length;
+            const square = squares[playerPosition];
+            const squareElement = document.getElementById(`square-${playerPosition}`);
+            const boardRect = board.getBoundingClientRect();
+            const squareRect = squareElement.getBoundingClientRect();
+            const top = squareRect.top - boardRect.top + squareRect.height / 2 - playerToken.offsetHeight / 2;
+            const left = squareRect.left - boardRect.left + squareRect.width / 2 - playerToken.offsetWidth / 2;
+            playerToken.style.top = `${top}px`;
+            playerToken.style.left = `${left}px`;
+            handleSquareAction(square);
+        }
+
+        
+        function handleSquareAction(square) {
+            if (square.owner === null) {
+                // Allow player to purchase property
+                const purchase = confirm(`Do you want to buy ${square.name} for $${square.cost}?`);
+                if (purchase && playerMoney >= square.cost) {
+                    if (currentPlayer === 1) {
+                        playerMoney -= square.cost;
+                        playerProperties.push(square);
+                        square.owner = 'Player 1';
+                        updatePlayerInfo();
+                    } else if (currentPlayer === 2) {
+                        playerMoney2 -= square.cost;
+                        playerProperties2.push(square);
+                        square.owner = 'Player 2';
+                        updatePlayerInfo();
+                    }
+                    switchPlayerTurn();
+                } else if (purchase && playerMoney < square.cost) {
+                    alert('Lack of funds to buy the property.');
+                }
+            } else if (square.owner !== 'Player 1' && currentPlayer === 1) {
+              
+                const rentAmount = 50; 
+                if (playerMoney >= rentAmount) {
+                    playerMoney -= rentAmount;
+                    const owner = square.owner;
+                    const ownerMoneyElement = document.getElementById(`${owner.toLowerCase()}-money`);
+                    ownerMoneyElement.textContent = `Money: $${parseInt(ownerMoneyElement.textContent.split('$')[1]) + rentAmount}`;
+                    playerMoneyElement.textContent = `Money: $${playerMoney}`;
+                } else {
+                    alert('You do not have enough money to pay rent!');
+                }
+                switchPlayerTurn();
+            } else if (square.owner !== 'Player 2' && currentPlayer === 2) {
+                // Pay rent to other player
+                const rentAmount = 150; // Example rent amount
+                if (playerMoney2 >= rentAmount) {
+                    playerMoney2 -= rentAmount;
+                    const owner = square.owner;
+                    const ownerMoneyElement = document.getElementById(`${owner.toLowerCase()}-money`);
+                    ownerMoneyElement.textContent = `Money: $${parseInt(ownerMoneyElement.textContent.split('$')[1]) + rentAmount}`;
+                    player2MoneyElement.textContent = `Money: $${playerMoney2}`;
+                } else {
+                    alert('You do not have enough money to pay rent!');
+                }
+                switchPlayerTurn();
+            }
+        }
+
+        // Function to update player information display
+        function updatePlayerInfo() {
+            playerNameElement.textContent = `Player 1`;
+            playerMoneyElement.textContent = `Money: $${playerMoney}`;
+            let properties = "None";
+            if (playerProperties.length > 0) {
+                properties = playerProperties.map(property => property.name).join(", ");
+            }
+            playerPropertiesElement.textContent = `Properties: ${properties}`;
+
+            player2NameElement.textContent = `Player 2`;
+            player2MoneyElement.textContent = `Money: $${playerMoney2}`; // Use playerMoney2
+            let properties2 = "None";
+            if (playerProperties2.length > 0) {
+                properties2 = playerProperties2.map(property => property.name).join(", ");
+            }
+            player2PropertiesElement.textContent = `Properties: ${properties2}`;
+
+            if (playerCount === 2) {
+                document.getElementById('player2Info').style.display = 'block';
+            } else {
+                document.getElementById('player2Info').style.display = 'none';
+            }
+        }
+
+        // Function to switch player turn
+        function switchPlayerTurn() {
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+        }
+
+        // Function to change player count
+        function changePlayerCount() {
+            const playerCountSelect = document.getElementById("playerCount");
+            playerCount = parseInt(playerCountSelect.value);
+            updatePlayerInfo(); // Update player info based on selected player count
+        }
+
+        // Function to initialize the game board
+        function initializeBoard() {
+            squares.forEach((square, index) => {
+                const div = document.createElement("div");
+                div.classList.add("square");
+                div.textContent = square.name;
+                div.id = `square-${index}`;
+                if (square.owner !== null) {
+                    div.classList.add('owned');
+                }
+
+                // Append price to each square
+                const priceSpan = document.createElement("span");
+                priceSpan.classList.add("price");
+                priceSpan.textContent = `$${square.cost}`;
+                div.appendChild(priceSpan);
+
+                board.appendChild(div);
+            });
+        }
+
+        
+        initializeBoard();
+    </script>
+</body>
+</html>
